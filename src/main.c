@@ -17,6 +17,7 @@
  * along with tsh.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -34,44 +35,76 @@ char *strdup(const char *s) {
 }
 #endif
 
+void command_loop(bool interactive);
 
 int main(int argc, const char** argv) {
-    char buffer[512];
-    char* cmd_argv[256];
+    if (isatty(STDIN_FILENO) == 1) {
+        /* Interactive shell */
+        command_loop(true);
+    } else {
+        /* Non-interactive shell */
+        command_loop(false);
+    }
+    return 0;
+}
+
+void command_loop(bool interactive) {
+    char* buffer = calloc(512, sizeof(char));
+    char** cmd_argv = calloc(512, sizeof(char*));
     char* token;
     int i = 0;
     int ret;
-    if (isatty(STDIN_FILENO)) {
-        /* Interactive shell */
-        while (1) {
+    bool background = false;
+    while (1) {
+        if (interactive)
             printf("$ ");
-            fgets(buffer, 512, stdin);
-            for (size_t j = 0; j < strlen(buffer); j++) {
-                if (buffer[j] == '\n') {
-                    buffer[j] = '\0';
-                }
+        fgets(buffer, 512, stdin);
+        for (size_t j = 0; j < strlen(buffer); j++) {
+            if (buffer[j] == '\n') {
+                buffer[j] = '\0';
             }
-            token = strtok(buffer, " ");
-            while (token != NULL) {
-                cmd_argv[i] = strdup(token);
-                token = strtok(NULL, " ");
-                i++;
-            }
-            cmd_argv[i] = NULL;
-            if (strncmp("exit", cmd_argv[0], 4) == 0) {
-                break;
-            }
-            ret = fork();
-            if (ret <= 0) {
-                execvp(cmd_argv[0], cmd_argv);
-                exit(0);
-            }
-            wait(NULL);
-            i = 0;
         }
-        puts("Exiting...");
-    } else {
-        /* Non-interactive shell */
+        token = strtok(buffer, " ");
+        while (token != NULL) {
+            if (strncmp("&", token, 2) == 0)
+                background = true;
+            
+            cmd_argv[i] = strdup(token);
+            token = strtok(NULL, " ");
+            i++;
+        }
+        cmd_argv[i] = NULL;
+        if (strncmp("exit", cmd_argv[0], 4) == 0) {
+            break;
+        }
+        if (strncmp("echo", cmd_argv[0], 5) == 0) {
+            if (strncmp("$?", cmd_argv[1], 3) == 0) {
+                printf("%d\n", ret);
+                goto reset;
+            }
+            for (int arg = 1; arg < i; arg++) {
+                printf("%s ", cmd_argv[arg]);
+            }
+            printf("\n");
+            goto reset;
+        }
+        if (strncmp("fg", cmd_argv[0], 3)) {
+            wait(NULL);
+            goto reset;
+        }
+        ret = fork();
+        if (ret == 0) {
+            execvp(cmd_argv[0], cmd_argv);
+            exit(0);
+        }
+        if (!background)
+            wait(&ret);
+reset:
+        i = 0;
+        background = false;
     }
-    return 0;
+    if (interactive)
+        puts("Exiting...");
+    free(buffer);
+    free(cmd_argv);
 }
