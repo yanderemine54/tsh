@@ -1,2 +1,3 @@
 bin_PROGRAMS = tsh
-tsh_SOURCES = main.c
+include_HEADERS = stack.h
+tsh_SOURCES = main.c stack.c

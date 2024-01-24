@@ -23,6 +23,7 @@
 #include <string.h>
 #include <unistd.h>
 #include <sys/wait.h>
+#include "stack.h"
 
 #if !(_XOPEN_SOURCE >= 500 || _POSIX_C_SOURCE >= 200809L || _BSD_SOURCE || _SVID_SOURCE)
 char *strdup(const char *s) {
@@ -55,6 +56,8 @@ void command_loop(bool interactive) {
     int i = 0;
     int ret;
     bool background = false;
+    stack_t* stack = init_stack();
+
     while (1) {
         if (interactive)
             printf("$ ");
@@ -66,9 +69,9 @@ void command_loop(bool interactive) {
         }
         token = strtok(buffer, " ");
         while (token != NULL) {
-            if (strncmp("&", token, 2) == 0)
+            if (strncmp("&", token, 2) == 0) {
                 background = true;
-            
+            }
             cmd_argv[i] = strdup(token);
             token = strtok(NULL, " ");
             i++;
@@ -88,8 +91,9 @@ void command_loop(bool interactive) {
             printf("\n");
             goto reset;
         }
-        if (strncmp("fg", cmd_argv[0], 3)) {
-            wait(NULL);
+        if (strncmp("fg", cmd_argv[0], 3) == 0) {
+            ret = pop(stack);
+            wait(&ret);
             goto reset;
         }
         ret = fork();
@@ -99,12 +103,15 @@ void command_loop(bool interactive) {
         }
         if (!background)
             wait(&ret);
+        else
+            push(stack, ret);
 reset:
         i = 0;
         background = false;
     }
     if (interactive)
         puts("Exiting...");
+    free(stack);
     free(buffer);
     free(cmd_argv);
 }
