@@ -56,7 +56,7 @@ void command_loop(bool interactive) {
     int i = 0;
     int ret;
     bool background = false;
-    stack_t* stack = init_stack();
+    tsh_stack_t* stack = init_stack();
 
     while (1) {
         if (interactive)

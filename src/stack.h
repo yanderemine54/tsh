@@ -20,8 +20,8 @@
 typedef struct {
     int top;
     int* array;
-} stack_t;
-stack_t* init_stack(void);
-int push(stack_t* stack, int element);
-int pop(stack_t* stack);
+} tsh_stack_t;
+tsh_stack_t* init_stack(void);
+int push(tsh_stack_t* stack, int element);
+int pop(tsh_stack_t* stack);
 #endif

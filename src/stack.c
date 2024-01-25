@@ -20,23 +20,24 @@
 #include <stdlib.h>
 #include "stack.h"
 
-stack_t* init_stack(void) {
-    stack_t* stack = calloc(1, sizeof(stack_t));
+tsh_stack_t* init_stack(void) {
+    tsh_stack_t* stack = calloc(1, sizeof(tsh_stack_t));
     stack->top = -1;
     stack->array = calloc(512, sizeof(int));
     return stack;
 }
 
-int push(stack_t* stack, int element) {
+int push(tsh_stack_t* stack, int element) {
     if (stack->top == 512 - 1) {
         return 0;
     }
 
     stack->top++;
     stack->array[stack->top] = element;
+    return 1;
 }
 
-int pop(stack_t* stack) {
+int pop(tsh_stack_t* stack) {
     int element;
 
     if (stack->top == -1) {
